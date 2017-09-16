@@ -15,12 +15,15 @@ TODO:
 #include <Ticker.h>
 #include <MCP3008.h>
 #include <SPI.h>
+#include <SoftwareSerial.h>
+
 
 /*
 Pin definitions
  */
 #define DHTPIN D3
 #define DHTTYPE DHT22
+#define relayPin D8
 
 /*
 ADC Pin Definitions
@@ -70,6 +73,7 @@ MCP3008 adc2(CLOCK_PIN, MOSI_PIN, MISO_PIN, CS2_PIN);
 Global Variables
  */
 float temperature = 0.0;
+float thresholdTemp = 0.0;
 int zeroFactor[31] = {0};   //ZeroFactor for all attached ACS712s. Set thru calibrateAll Function.
 float current[31] = {0.00}; //Current Sensed for all attached ACS712s.
 
@@ -82,7 +86,9 @@ void getCurrent();     //Gets Current from all attached ACS712s.
 #endif
 
 void setup(){
-  Serial.begin(115200);
+  Serial.begin(38400);
+  pinMode(relayPin, OUTPUT);
+  digitalWrite(relayPin, LOW);
   Serial.println("Starting...");
   lcd.begin(16,2);
   lcd.init();
@@ -95,7 +101,7 @@ void setup(){
   dht22Ticker.attach(10, tempFlag);
   lcd.setCursor(0,0);
   lcd.print("Starting Sensors");
-  calibrateAll();
+  //calibrateAll();
   delay(2000);
   lcd.clear();
 }
@@ -123,7 +129,19 @@ void loop(){
 
   }
 
-  delay(1000);
+  if(Serial.available())
+  {
+    String cmd = Serial.readString();
+    thresholdTemp = cmd.toFloat();
+    Serial.print("thresholdTemp : ");
+    Serial.println(thresholdTemp);
+  }
+
+  if(temperature > thresholdTemp){
+    digitalWrite(relayPin, HIGH);
+  }
+  else
+    digitalWrite(relayPin, LOW);
 
 }
 
@@ -132,7 +150,6 @@ Function Definitions
  */
 void tempFlag(){
   tempCheckFlag = true;
-  //Serial.println("Flag set");
 }
 
 
